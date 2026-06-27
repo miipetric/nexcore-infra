@@ -1,0 +1,26 @@
+---
+- name: Install baseline packages
+  ansible.builtin.dnf:
+    name:
+      - chrony
+      - firewalld
+      - policycoreutils-python-utils
+      - nfs-utils
+      - autofs
+      - s-nail
+    state: present
+    disable_gpg_check: true
+
+- name: Enable baseline services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - chronyd
+    - firewalld
+
+- name: Keep SELinux enforcing
+  ansible.posix.selinux:
+    policy: targeted
+    state: enforcing

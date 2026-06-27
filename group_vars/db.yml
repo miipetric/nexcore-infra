@@ -1,0 +1,9 @@
+---
+db_root_password: ChangeMeRoot123!
+mysql_socket: /var/lib/mysql/mysql.sock
+wordpress_db: wordpress
+wordpress_user: wpuser
+wordpress_pass: ChangeMeWp123!
+mediawiki_db: mediawiki
+mediawiki_user: wikiuser
+mediawiki_pass: ChangeMeWiki123!

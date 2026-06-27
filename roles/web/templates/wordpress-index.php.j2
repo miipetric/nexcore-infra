@@ -1,0 +1,5 @@
+<?php
+$mysqli = @new mysqli("{{ hostvars['serverb'].ansible_default_ipv4.address }}", "{{ wordpress_user }}", "{{ wordpress_pass }}", "{{ wordpress_db }}");
+echo "<h1>NexCore Company Website / Blog</h1>";
+echo $mysqli->connect_errno ? "<p>Database connection pending</p>" : "<p>WordPress database reachable on serverb.</p>";
+?>

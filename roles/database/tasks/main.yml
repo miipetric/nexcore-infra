@@ -1,0 +1,49 @@
+---
+- name: Install database packages
+  ansible.builtin.dnf:
+    name:
+      - mariadb-server
+      - python3-PyMySQL
+    state: present
+
+- name: Enable MariaDB
+  ansible.builtin.service:
+    name: mariadb
+    enabled: true
+    state: started
+
+- name: Create application databases
+  community.mysql.mysql_db:
+    name: "{{ item }}"
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+  loop:
+    - "{{ mediawiki_db }}"
+    - "{{ wordpress_db }}"
+
+- name: Create application database users
+  community.mysql.mysql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    host: "%"
+    priv: "{{ item.db }}.*:ALL"
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+  loop:
+    - { name: "{{ mediawiki_user }}", password: "{{ mediawiki_pass }}", db: "{{ mediawiki_db }}" }
+    - { name: "{{ wordpress_user }}", password: "{{ wordpress_pass }}", db: "{{ wordpress_db }}" }
+
+- name: Listen on all interfaces for app hosts
+  ansible.builtin.lineinfile:
+    path: /etc/my.cnf.d/mariadb-server.cnf
+    insertafter: '^\[mysqld\]'
+    regexp: '^bind-address='
+    line: 'bind-address=0.0.0.0'
+  notify: Restart mariadb
+
+- name: Open database firewall port
+  ansible.posix.firewalld:
+    port: 3306/tcp
+    permanent: true
+    immediate: true
+    state: enabled

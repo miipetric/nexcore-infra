@@ -1,0 +1,81 @@
+---
+- name: Install NFS/LVM packages
+  ansible.builtin.dnf:
+    name: [nfs-utils, lvm2]
+    state: present
+
+- name: Check dedicated shared storage device
+  ansible.builtin.stat:
+    path: "{{ shared_device }}"
+  register: shared_device_stat
+
+- name: Create volume group for shared storage when device exists
+  community.general.lvg:
+    vg: "{{ shared_vg_name }}"
+    pvs: "{{ shared_device }}"
+  when: shared_device_stat.stat.exists
+  ignore_errors: true
+
+- name: Create logical volume for shared storage
+  community.general.lvol:
+    vg: "{{ shared_vg_name }}"
+    lv: "{{ shared_lv_name }}"
+    size: "{{ shared_size }}"
+  ignore_errors: true
+  when: shared_device_stat.stat.exists
+
+- name: Create filesystem on shared LV
+  community.general.filesystem:
+    fstype: xfs
+    dev: "/dev/{{ shared_vg_name }}/{{ shared_lv_name }}"
+  ignore_errors: true
+  when: shared_device_stat.stat.exists
+
+- name: Mount shared LV
+  ansible.posix.mount:
+    path: "{{ nfs_export }}"
+    src: "/dev/{{ shared_vg_name }}/{{ shared_lv_name }}"
+    fstype: xfs
+    state: mounted
+  ignore_errors: true
+  when: shared_device_stat.stat.exists
+
+- name: Fallback create shared export directory
+  ansible.builtin.file:
+    path: "{{ nfs_export }}"
+    state: directory
+    owner: root
+    group: dev
+    mode: '2775'
+
+- name: Create per-user NFS directories
+  ansible.builtin.file:
+    path: "{{ nfs_export }}/users/{{ item.name }}"
+    state: directory
+    owner: "{{ item.name }}"
+    group: "{{ item.groups[0] }}"
+    mode: '0700'
+  loop: "{{ users }}"
+
+- name: Configure NFS exports
+  ansible.builtin.template:
+    src: exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Exportfs refresh
+
+- name: Enable NFS server
+  ansible.builtin.service:
+    name: nfs-server
+    enabled: true
+    state: started
+
+- name: Open NFS firewall services
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: [nfs, mountd, rpc-bind]

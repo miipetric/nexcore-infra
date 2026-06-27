@@ -1,0 +1,32 @@
+---
+- name: Update all packages
+  ansible.builtin.dnf:
+    name: '*'
+    state: latest
+  register: patch_result
+
+- name: Weekly package cache cleanup
+  ansible.builtin.cron:
+    name: nexcore weekly dnf cache cleanup
+    weekday: '0'
+    hour: '4'
+    minute: '0'
+    job: /usr/bin/dnf clean all
+
+- name: Check whether reboot is required
+  ansible.builtin.command: needs-restarting -r
+  register: reboot_required
+  failed_when: false
+  changed_when: reboot_required.rc == 1
+
+- name: Reboot automatically when required after patching
+  ansible.builtin.reboot:
+    reboot_timeout: 900
+  when: reboot_required.rc == 1
+
+- name: Send daily patch/health summary to ops01
+  ansible.builtin.cron:
+    name: nexcore daily email summary
+    minute: '30'
+    hour: '3'
+    job: "tail -100 {{ health_log }} | mail -s 'NexCore health summary' {{ ops_email }}"

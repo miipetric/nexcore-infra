@@ -1,0 +1,34 @@
+<?php
+/** NexCore WordPress configuration managed by Ansible. */
+
+define( 'DB_NAME', '{{ wordpress_db }}' );
+define( 'DB_USER', '{{ wordpress_user }}' );
+define( 'DB_PASSWORD', '{{ wordpress_pass }}' );
+define( 'DB_HOST', '{{ hostvars['serverb'].ansible_default_ipv4.address }}' );
+define( 'DB_CHARSET', 'utf8mb4' );
+define( 'DB_COLLATE', '' );
+
+{% set salts = {
+'AUTH_KEY': 'nexcore-auth-key-change-me-2026',
+'SECURE_AUTH_KEY': 'nexcore-secure-auth-key-change-me-2026',
+'LOGGED_IN_KEY': 'nexcore-logged-in-key-change-me-2026',
+'NONCE_KEY': 'nexcore-nonce-key-change-me-2026',
+'AUTH_SALT': 'nexcore-auth-salt-change-me-2026',
+'SECURE_AUTH_SALT': 'nexcore-secure-auth-salt-change-me-2026',
+'LOGGED_IN_SALT': 'nexcore-logged-in-salt-change-me-2026',
+'NONCE_SALT': 'nexcore-nonce-salt-change-me-2026'
+} %}
+{% for key, value in salts.items() %}
+define( '{{ key }}', '{{ value }}' );
+{% endfor %}
+
+$table_prefix = '{{ wordpress_table_prefix | default("wp_") }}';
+
+define( 'WP_DEBUG', false );
+define( 'FS_METHOD', 'direct' );
+
+if ( ! defined( 'ABSPATH' ) ) {
+    define( 'ABSPATH', __DIR__ . '/' );
+}
+
+require_once ABSPATH . 'wp-settings.php';

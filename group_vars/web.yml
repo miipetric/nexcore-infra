@@ -1,0 +1,38 @@
+---
+web_packages:
+  - httpd
+  - php
+  - php-cli
+  - php-mysqlnd
+  - php-gd
+  - php-xml
+  - php-mbstring
+  - php-intl
+  - php-json
+  - mariadb
+  - php-zip
+  - php-curl
+  - tar
+  - gzip
+
+wordpress_db: wordpress
+wordpress_user: wpuser
+wordpress_pass: ChangeMeWp123!
+
+mediawiki_db: mediawiki
+mediawiki_user: wikiuser
+mediawiki_pass: ChangeMeWiki123!
+mediawiki_version: "1.39.8"
+mediawiki_download_url: "https://releases.wikimedia.org/mediawiki/1.39/mediawiki-{{ mediawiki_version }}.tar.gz"
+mediawiki_site_name: "NexCore Internal Knowledge Base"
+mediawiki_admin_user: "Admin"
+mediawiki_admin_pass: "ChangeMeWikiAdmin123!"
+
+
+wordpress_download_url: "https://wordpress.org/latest.tar.gz"
+wordpress_site_title: "NexCore Company Website / Blog"
+wordpress_admin_user: "admin"
+wordpress_admin_pass: "ChangeMeWpAdmin123!"
+wordpress_admin_email: "ops01@nexcore.local"
+wordpress_table_prefix: "wp_"
+wp_cli_url: "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"

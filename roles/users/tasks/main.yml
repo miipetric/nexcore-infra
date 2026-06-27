@@ -1,0 +1,83 @@
+---
+# Cleanup for older versions of this project: the previous AutoFS config used /home
+# as an indirect map, which can block the user module on later playbook runs.
+- name: Remove legacy AutoFS /home master map if present
+  ansible.builtin.file:
+    path: /etc/auto.master.d/nexcore.autofs
+    state: absent
+  register: legacy_autofs_master
+
+- name: Remove legacy AutoFS /home map if present
+  ansible.builtin.file:
+    path: /etc/auto.nexcore
+    state: absent
+  register: legacy_autofs_map
+
+- name: Restart AutoFS after removing legacy /home map
+  ansible.builtin.service:
+    name: autofs
+    state: restarted
+  when: legacy_autofs_master.changed or legacy_autofs_map.changed
+  failed_when: false
+
+- name: Ensure /home base directory has normal ownership and permissions
+  ansible.builtin.file:
+    path: /home
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure business groups exist
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ops
+    - dev
+    - marketing
+
+- name: Create managed users
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups }}"
+    append: true
+    shell: /bin/bash
+    create_home: true
+    home: "/home/{{ item.name }}"
+    state: present
+  loop: "{{ users }}"
+
+- name: Ensure .ssh directories exist
+  ansible.builtin.file:
+    path: "/home/{{ item.name }}/.ssh"
+    state: directory
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: "0700"
+  loop: "{{ users }}"
+
+- name: Install authorized keys
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ lookup('file', ssh_public_key_file) }}"
+    state: present
+  loop: "{{ users }}"
+
+- name: Configure sudoers for ops01 only
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/nexcore-ops01
+    owner: root
+    group: root
+    mode: "0440"
+    content: "ops01 ALL=(ALL) NOPASSWD:ALL\n"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Create local mailboxes
+  ansible.builtin.file:
+    path: "/var/spool/mail/{{ item.name }}"
+    state: touch
+    owner: "{{ item.name }}"
+    group: mail
+    mode: "0660"
+  loop: "{{ users }}"

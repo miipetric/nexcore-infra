@@ -1,0 +1,74 @@
+---
+# BR-01 - Internal knowledge base / MediaWiki
+domain_name: nexcore.local
+wiki_fqdn: wiki.nexcore.local
+
+mediawiki_db: mediawiki
+mediawiki_user: wikiuser
+mediawiki_pass: ChangeMeWiki123!
+
+mediawiki_version: "1.39.8"
+mediawiki_download_url: "https://releases.wikimedia.org/mediawiki/1.39/mediawiki-{{ mediawiki_version }}.tar.gz"
+mediawiki_site_name: "NexCore Internal Knowledge Base"
+mediawiki_admin_user: "Admin"
+mediawiki_admin_pass: "ChangeMeWikiAdmin123!"
+
+# BR-02 - Company website / blog / WordPress
+
+www_fqdn: www.nexcore.local
+
+db_root_password: ChangeMeRoot123!
+mysql_socket: /var/lib/mysql/mysql.sock
+
+wordpress_db: wordpress
+wordpress_user: wpuser
+wordpress_pass: ChangeMeWp123!
+
+wordpress_download_url: "https://wordpress.org/latest.tar.gz"
+wordpress_site_title: "NexCore Company Website / Blog"
+wordpress_admin_user: "admin"
+wordpress_admin_pass: "ChangeMeWpAdmin123!"
+wordpress_admin_email: "ops01@nexcore.local"
+wordpress_table_prefix: "wp_"
+wp_cli_url: "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+
+# BR-03 - Shared file storage / NFS / LVM
+
+nfs_export: /mnt/shared
+shared_lv_name: lv_shared
+shared_vg_name: vg_shared
+shared_device: /dev/sda
+shared_size: 2g
+
+# BR-04 - Internal DNS
+
+dns_forwarders:
+  - 8.8.8.8
+
+# BR-05 - User and access management
+
+users:
+  - { name: ops01, groups: [ops], sudo: true }
+  - { name: dev01, groups: [dev], sudo: false }
+  - { name: dev02, groups: [dev], sudo: false }
+  - { name: mkt01, groups: [marketing], sudo: false }
+
+
+ssh_public_key_file: nexcore_lab_key.pub
+
+# BR-07 - Internal email server / Postfix
+
+mail_domain: nexcore.local
+ops_email: ops01@nexcore.local
+
+# BR-08 - Security hardening
+allowed_tcp_ports: []
+
+# BR-09 - Centralized logging
+
+rsyslog_remote_log: /var/log/remote/serverb.log
+
+# BR-10 - Automated maintenance
+
+health_log: /var/log/nexcore-health.log
+

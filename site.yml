@@ -1,0 +1,49 @@
+---
+- name: Base configuration on managed servers
+  hosts: managed
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - users
+    - security
+
+- name: Database and NFS storage on serverb
+  hosts: db
+  become: true
+  roles:
+    - storage
+    - database
+
+- name: DNS, mail and logging receiver on servera
+  hosts: servera
+  become: true
+  roles:
+    - dns
+    - email
+    - logging
+
+- name: Configure DNS clients on managed servers
+  hosts: managed
+  become: true
+  roles:
+    - resolver
+
+- name: Web services on servera
+  hosts: web
+  become: true
+  roles:
+    - web
+
+- name: Automount and maintenance on managed servers
+  hosts: managed
+  become: true
+  roles:
+    - automount
+    - patching
+
+- name: Final SSH hardening after all other work is complete
+  hosts: managed
+  become: true
+  roles:
+    - ssh_hardening

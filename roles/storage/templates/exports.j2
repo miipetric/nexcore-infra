@@ -1,0 +1,4 @@
+{{ nfs_export }} *(rw,sync,no_subtree_check,root_squash)
+{% for u in users %}
+{{ nfs_export }}/users/{{ u.name }} *(rw,sync,no_subtree_check,root_squash)
+{% endfor %}

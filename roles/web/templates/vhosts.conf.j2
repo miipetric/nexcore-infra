@@ -1,0 +1,17 @@
+<VirtualHost *:80>
+  ServerName {{ wiki_fqdn }}
+  DocumentRoot /var/www/wiki
+  <Directory /var/www/wiki>
+    AllowOverride All
+    Require all granted
+  </Directory>
+</VirtualHost>
+
+<VirtualHost *:80>
+  ServerName {{ www_fqdn }}
+  DocumentRoot /var/www/wordpress
+  <Directory /var/www/wordpress>
+    AllowOverride All
+    Require all granted
+  </Directory>
+</VirtualHost>

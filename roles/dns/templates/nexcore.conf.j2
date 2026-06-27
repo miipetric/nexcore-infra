@@ -1,0 +1,26 @@
+# NexCore internal DNS configuration
+
+domain-needed
+bogus-priv
+expand-hosts
+
+listen-address=127.0.0.1
+listen-address={{ hostvars['servera'].ansible_default_ipv4.address }}
+bind-interfaces
+
+local=/{{ domain_name }}/
+domain={{ domain_name }}
+
+address=/{{ wiki_fqdn }}/{{ hostvars['servera'].ansible_default_ipv4.address }}
+address=/{{ www_fqdn }}/{{ hostvars['servera'].ansible_default_ipv4.address }}
+address=/servera.{{ domain_name }}/{{ hostvars['servera'].ansible_default_ipv4.address }}
+address=/serverb.{{ domain_name }}/{{ hostvars['serverb'].ansible_default_ipv4.address }}
+
+mx-host={{ domain_name }},servera.{{ domain_name }},10
+
+# Forward non-local queries to Red Hat/lab DNS.
+# Do not read /etc/resolv.conf because this playbook changes it.
+no-resolv
+{% for forwarder in dns_forwarders %}
+server={{ forwarder }}
+{% endfor %}

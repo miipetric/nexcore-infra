@@ -1,0 +1,5 @@
+<?php
+$mysqli = @new mysqli("{{ hostvars['serverb'].ansible_default_ipv4.address }}", "{{ mediawiki_user }}", "{{ mediawiki_pass }}", "{{ mediawiki_db }}");
+echo "<h1>NexCore Internal Knowledge Base</h1>";
+echo $mysqli->connect_errno ? "<p>Database connection pending</p>" : "<p>MediaWiki database reachable on serverb.</p>";
+?>

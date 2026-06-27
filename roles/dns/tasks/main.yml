@@ -1,0 +1,65 @@
+---
+- name: Install dnsmasq and DNS tools
+  ansible.builtin.dnf:
+    name:
+      - dnsmasq
+      - bind-utils
+    state: present
+    disable_gpg_check: true
+
+- name: Deploy NexCore dnsmasq config
+  ansible.builtin.template:
+    src: nexcore.conf.j2
+    dest: /etc/dnsmasq.d/nexcore.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart dnsmasq
+
+- name: Enable and start dnsmasq
+  ansible.builtin.service:
+    name: dnsmasq
+    enabled: true
+    state: started
+
+- name: Allow DNS through firewall
+  ansible.posix.firewalld:
+    service: dns
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Flush DNS handler before validation
+  ansible.builtin.meta: flush_handlers
+
+- name: Remove immutable attribute from resolv.conf on DNS server
+  ansible.builtin.command: chattr -i /etc/resolv.conf
+  changed_when: false
+  failed_when: false
+
+- name: Configure resolver on DNS server to use local dnsmasq
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      search {{ domain_name }}
+      nameserver 127.0.0.1
+
+- name: Set immutable attribute on resolv.conf on DNS server
+  ansible.builtin.command: chattr +i /etc/resolv.conf
+  changed_when: false
+  failed_when: false
+
+- name: Verify internal DNS resolution through local dnsmasq
+  ansible.builtin.command: "dig @127.0.0.1 {{ wiki_fqdn }} +short"
+  register: dns_internal_check
+  changed_when: false
+  failed_when: dns_internal_check.stdout | trim == ""
+
+- name: Verify external DNS resolution through configured lab forwarder
+  ansible.builtin.command: "dig @127.0.0.1 redhat.com +short"
+  register: dns_external_check
+  changed_when: false
+  failed_when: dns_external_check.stdout | trim == ""

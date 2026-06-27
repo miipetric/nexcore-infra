@@ -1,0 +1,65 @@
+---
+- name: Install rsyslog
+  ansible.builtin.dnf:
+    name: rsyslog
+    state: present
+
+- name: Configure servera as TCP syslog receiver
+  ansible.builtin.template:
+    src: servera.conf.j2
+    dest: /etc/rsyslog.d/10-nexcore-server.conf
+    mode: '0644'
+  when: inventory_hostname == 'servera'
+  notify: Restart rsyslog
+
+- name: Configure serverb forwarding to servera
+  ansible.builtin.template:
+    src: serverb-forward.conf.j2
+    dest: /etc/rsyslog.d/10-nexcore-forward.conf
+    mode: '0644'
+  when: inventory_hostname == 'serverb'
+  notify: Restart rsyslog
+
+- name: Create remote log directory on servera
+  ansible.builtin.file:
+    path: /var/log/remote
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: inventory_hostname == 'servera'
+
+- name: Open rsyslog TCP port on servera
+  ansible.posix.firewalld:
+    port: 514/tcp
+    permanent: true
+    immediate: true
+    state: enabled
+  when: inventory_hostname == 'servera'
+
+- name: Enable rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    enabled: true
+    state: started
+
+- name: Deploy health check script
+  ansible.builtin.copy:
+    dest: /usr/local/sbin/nexcore-health.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      { hostname; uptime; df -h; } >> {{ health_log }}
+
+- name: Daily health cron
+  ansible.builtin.cron:
+    name: nexcore health check
+    minute: '0'
+    hour: '3'
+    job: /usr/local/sbin/nexcore-health.sh
+
+- name: Logrotate health check log
+  ansible.builtin.template:
+    src: nexcore-health.logrotate.j2
+    dest: /etc/logrotate.d/nexcore-health
+    mode: '0644'

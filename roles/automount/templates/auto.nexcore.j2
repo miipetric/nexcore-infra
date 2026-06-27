@@ -1,0 +1,3 @@
+{% for u in users %}
+{{ u.name }}/Company_Share -fstype=nfs4,rw serverb:{{ nfs_export }}/users/{{ u.name }}
+{% endfor %}

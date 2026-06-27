@@ -1,0 +1,27 @@
+---
+- name: Install postfix
+  ansible.builtin.dnf:
+    name: postfix
+    state: present
+
+- name: Configure postfix main.cf
+  ansible.builtin.template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart postfix
+
+- name: Enable postfix
+  ansible.builtin.service:
+    name: postfix
+    enabled: true
+    state: started
+
+- name: Open SMTP firewall
+  ansible.posix.firewalld:
+    service: smtp
+    permanent: true
+    immediate: true
+    state: enabled

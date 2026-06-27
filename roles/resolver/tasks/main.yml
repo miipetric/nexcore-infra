@@ -1,0 +1,38 @@
+---
+- name: Install DNS test tools
+  ansible.builtin.dnf:
+    name: bind-utils
+    state: present
+    disable_gpg_check: true
+
+- name: Remove immutable attribute from resolv.conf
+  ansible.builtin.command: chattr -i /etc/resolv.conf
+  changed_when: false
+  failed_when: false
+
+- name: Configure managed servers to use NexCore DNS server
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      search {{ domain_name }}
+      nameserver {{ hostvars['servera'].ansible_default_ipv4.address }}
+
+- name: Set immutable attribute on resolv.conf
+  ansible.builtin.command: chattr +i /etc/resolv.conf
+  changed_when: false
+  failed_when: false
+
+- name: Verify internal DNS resolution through system resolver
+  ansible.builtin.command: "getent hosts {{ wiki_fqdn }}"
+  register: resolver_internal_check
+  changed_when: false
+  failed_when: resolver_internal_check.stdout | trim == ""
+
+- name: Verify external DNS resolution through system resolver
+  ansible.builtin.command: "getent hosts redhat.com"
+  register: resolver_external_check
+  changed_when: false
+  failed_when: resolver_external_check.stdout | trim == ""

@@ -1,0 +1,10 @@
+myhostname = servera.{{ domain_name }}
+mydomain = {{ domain_name }}
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = ipv4
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+home_mailbox =
+mail_spool_directory = /var/spool/mail
+mynetworks = 127.0.0.0/8 {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.prefix }}
+smtpd_banner = $myhostname ESMTP NexCore

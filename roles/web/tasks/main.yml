@@ -1,0 +1,174 @@
+---
+- name: Install web, PHP and application helper packages
+  ansible.builtin.dnf:
+    name: "{{ web_packages }}"
+    state: present
+
+- name: Create application download directory
+  ansible.builtin.file:
+    path: /opt/nexcore/src
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# MediaWiki install
+
+- name: Download MediaWiki release archive
+  ansible.builtin.get_url:
+    url: "{{ mediawiki_download_url }}"
+    dest: "/opt/nexcore/src/mediawiki-{{ mediawiki_version }}.tar.gz"
+    mode: "0644"
+    timeout: 120
+
+- name: Extract MediaWiki
+  ansible.builtin.unarchive:
+    src: "/opt/nexcore/src/mediawiki-{{ mediawiki_version }}.tar.gz"
+    dest: /var/www
+    remote_src: true
+    creates: "/var/www/mediawiki-{{ mediawiki_version }}/maintenance/install.php"
+
+- name: Point wiki document root to MediaWiki
+  ansible.builtin.file:
+    src: "/var/www/mediawiki-{{ mediawiki_version }}"
+    dest: /var/www/wiki
+    state: links
+
+- name: Set MediaWiki ownership
+  ansible.builtin.file:
+    path: "/var/www/mediawiki-{{ mediawiki_version }}"
+    owner: apache
+    group: apache
+    recurse: true
+
+- name: Install MediaWiki non-interactively
+  ansible.builtin.command: >
+    php maintenance/install.php
+    --dbname {{ mediawiki_db }}
+    --dbserver {{ hostvars['serverb'].ansible_default_ipv4.address }}
+    --dbuser {{ mediawiki_user }}
+    --dbpass {{ mediawiki_pass }}
+    --server http://{{ wiki_fqdn }}
+    --scriptpath ""
+    --lang en
+    --pass {{ mediawiki_admin_pass }}
+    "{{ mediawiki_site_name }}"
+    {{ mediawiki_admin_user }}
+  args:
+    chdir: /var/www/wiki
+    creates: /var/www/wiki/LocalSettings.php
+  no_log: true
+
+- name: Ensure MediaWiki LocalSettings.php ownership and permissions
+  ansible.builtin.file:
+    path: /var/www/wiki/LocalSettings.php
+    owner: apache
+    group: apache
+    mode: "0640"
+
+# WordPress real install
+
+- name: Download WordPress release archive
+  ansible.builtin.get_url:
+    url: "{{ wordpress_download_url }}"
+    dest: /opt/nexcore/src/wordpress-latest.tar.gz
+    mode: "0644"
+    timeout: 120
+
+- name: Extract WordPress
+  ansible.builtin.unarchive:
+    src: /opt/nexcore/src/wordpress-latest.tar.gz
+    dest: /var/www
+    remote_src: true
+    creates: /var/www/wordpress/wp-settings.php
+
+- name: Deploy WordPress wp-config.php
+  ansible.builtin.template:
+    src: wp-config.php.j2
+    dest: /var/www/wordpress/wp-config.php
+    owner: apache
+    group: apache
+    mode: "0640"
+  no_log: true
+
+- name: Set WordPress ownership
+  ansible.builtin.file:
+    path: /var/www/wordpress
+    owner: apache
+    group: apache
+    recurse: true
+
+- name: Download WP-CLI
+  ansible.builtin.get_url:
+    url: "{{ wp_cli_url }}"
+    dest: /usr/local/bin/wp
+    owner: root
+    group: root
+    mode: "0755"
+    timeout: 120
+
+- name: Check whether WordPress is already installed
+  ansible.builtin.command: /usr/local/bin/wp core is-installed --path=/var/www/wordpress --allow-root
+  register: wordpress_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install WordPress non-interactively
+  ansible.builtin.command: >
+    /usr/local/bin/wp core install
+    --path=/var/www/wordpress
+    --url=http://{{ www_fqdn }}
+    --title="{{ wordpress_site_title }}"
+    --admin_user={{ wordpress_admin_user }}
+    --admin_password={{ wordpress_admin_pass }}
+    --admin_email={{ wordpress_admin_email }}
+    --skip-email
+    --allow-root
+  when: wordpress_installed.rc != 0
+  no_log: true
+
+# Apache, SELinux, firewall
+
+- name: Deploy Apache vhosts
+  ansible.builtin.template:
+    src: vhosts.conf.j2
+    dest: /etc/httpd/conf.d/nexcore.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart httpd
+
+- name: Set SELinux context for custom web roots
+  community.general.sefcontext:
+    target: "{{ item }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  loop:
+    - "/var/www/mediawiki-{{ mediawiki_version }}"
+    - /var/www/wordpress
+
+- name: Restore SELinux context on web roots
+  ansible.builtin.command: "restorecon -RFv {{ item }}"
+  changed_when: false
+  loop:
+    - "/var/www/mediawiki-{{ mediawiki_version }}"
+    - /var/www/wordpress
+
+- name: Permit httpd database connections
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect_db
+    state: true
+    persistent: true
+
+- name: Enable Apache
+  ansible.builtin.service:
+    name: httpd
+    enabled: true
+    state: started
+
+- name: Open HTTP firewall
+  ansible.posix.firewalld:
+    service: http
+    permanent: true
+    immediate: true
+    state: enabled
