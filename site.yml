@@ -15,12 +15,17 @@
     - storage
     - database
 
-- name: DNS, mail and logging receiver on servera
+- name: DNS and mail on servera
   hosts: servera
   become: true
   roles:
     - dns
     - email
+
+- name: Centralized logging on managed servers
+  hosts: managed
+  become: true
+  roles:
     - logging
 
 - name: Configure DNS clients on managed servers

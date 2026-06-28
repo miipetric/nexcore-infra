@@ -43,23 +43,3 @@
     enabled: true
     state: started
 
-- name: Deploy health check script
-  ansible.builtin.copy:
-    dest: /usr/local/sbin/nexcore-health.sh
-    mode: '0755'
-    content: |
-      #!/bin/bash
-      { hostname; uptime; df -h; } >> {{ health_log }}
-
-- name: Daily health cron
-  ansible.builtin.cron:
-    name: nexcore health check
-    minute: '0'
-    hour: '3'
-    job: /usr/local/sbin/nexcore-health.sh
-
-- name: Logrotate health check log
-  ansible.builtin.template:
-    src: nexcore-health.logrotate.j2
-    dest: /etc/logrotate.d/nexcore-health
-    mode: '0644'

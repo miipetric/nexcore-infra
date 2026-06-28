@@ -54,7 +54,7 @@ users:
   - { name: mkt01, groups: [marketing], sudo: false }
 
 
-ssh_public_key_file: nexcore_lab_key.pub
+ssh_public_key_file: "files/nexcore_user.pub"
 
 # BR-07 - Internal email server / Postfix
 

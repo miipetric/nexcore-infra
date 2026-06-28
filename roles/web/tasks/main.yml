@@ -32,7 +32,7 @@
   ansible.builtin.file:
     src: "/var/www/mediawiki-{{ mediawiki_version }}"
     dest: /var/www/wiki
-    state: links
+    state: link
 
 - name: Set MediaWiki ownership
   ansible.builtin.file:

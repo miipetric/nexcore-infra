@@ -1,25 +1,4 @@
 ---
-# Cleanup for older versions of this project: the previous AutoFS config used /home
-# as an indirect map, which can block the user module on later playbook runs.
-- name: Remove legacy AutoFS /home master map if present
-  ansible.builtin.file:
-    path: /etc/auto.master.d/nexcore.autofs
-    state: absent
-  register: legacy_autofs_master
-
-- name: Remove legacy AutoFS /home map if present
-  ansible.builtin.file:
-    path: /etc/auto.nexcore
-    state: absent
-  register: legacy_autofs_map
-
-- name: Restart AutoFS after removing legacy /home map
-  ansible.builtin.service:
-    name: autofs
-    state: restarted
-  when: legacy_autofs_master.changed or legacy_autofs_map.changed
-  failed_when: false
-
 - name: Ensure /home base directory has normal ownership and permissions
   ansible.builtin.file:
     path: /home
@@ -57,7 +36,7 @@
     mode: "0700"
   loop: "{{ users }}"
 
-- name: Install authorized keys
+- name: Install authorized keys for managed users
   ansible.posix.authorized_key:
     user: "{{ item.name }}"
     key: "{{ lookup('file', ssh_public_key_file) }}"

@@ -1,8 +1,40 @@
 ---
+- name: Install dnf-utils for reboot detection
+  ansible.builtin.dnf:
+    name: dnf-utils
+    state: present
+    disable_gpg_check: true
+
+- name: Deploy NexCore health script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/nexcore-health.sh
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      {
+        echo "===== NexCore Health Report ====="
+        echo "Date: $(date)"
+        echo "Hostname: $(hostname)"
+        echo "Uptime: $(uptime)"
+        echo "Disk usage:"
+        df -h
+        echo
+      } >> {{ health_log }}
+
+- name: Schedule daily NexCore health check at 03:00
+  ansible.builtin.cron:
+    name: nexcore daily health check
+    minute: '0'
+    hour: '3'
+    job: /usr/local/bin/nexcore-health.sh
+
 - name: Update all packages
   ansible.builtin.dnf:
     name: '*'
     state: latest
+    disable_gpg_check: true
   register: patch_result
 
 - name: Weekly package cache cleanup

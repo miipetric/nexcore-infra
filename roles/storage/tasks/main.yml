@@ -1,8 +1,11 @@
 ---
 - name: Install NFS/LVM packages
   ansible.builtin.dnf:
-    name: [nfs-utils, lvm2]
+    name:
+      - nfs-utils
+      - lvm2
     state: present
+    disable_gpg_check: true
 
 - name: Check dedicated shared storage device
   ansible.builtin.stat:
@@ -21,15 +24,15 @@
     vg: "{{ shared_vg_name }}"
     lv: "{{ shared_lv_name }}"
     size: "{{ shared_size }}"
-  ignore_errors: true
   when: shared_device_stat.stat.exists
+  ignore_errors: true
 
 - name: Create filesystem on shared LV
   community.general.filesystem:
     fstype: xfs
     dev: "/dev/{{ shared_vg_name }}/{{ shared_lv_name }}"
-  ignore_errors: true
   when: shared_device_stat.stat.exists
+  ignore_errors: true
 
 - name: Mount shared LV
   ansible.posix.mount:
@@ -37,16 +40,24 @@
     src: "/dev/{{ shared_vg_name }}/{{ shared_lv_name }}"
     fstype: xfs
     state: mounted
-  ignore_errors: true
   when: shared_device_stat.stat.exists
+  ignore_errors: true
 
-- name: Fallback create shared export directory
+- name: Ensure shared export root exists
   ansible.builtin.file:
     path: "{{ nfs_export }}"
     state: directory
     owner: root
     group: dev
-    mode: '2775'
+    mode: "2775"
+
+- name: Ensure users parent directory exists
+  ansible.builtin.file:
+    path: "{{ nfs_export }}/users"
+    state: directory
+    owner: root
+    group: root
+    mode: "2755"
 
 - name: Create per-user NFS directories
   ansible.builtin.file:
@@ -54,7 +65,7 @@
     state: directory
     owner: "{{ item.name }}"
     group: "{{ item.groups[0] }}"
-    mode: '0700'
+    mode: "0700"
   loop: "{{ users }}"
 
 - name: Configure NFS exports
@@ -63,7 +74,7 @@
     dest: /etc/exports
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
   notify: Exportfs refresh
 
 - name: Enable NFS server
@@ -78,4 +89,7 @@
     permanent: true
     immediate: true
     state: enabled
-  loop: [nfs, mountd, rpc-bind]
+  loop:
+    - nfs
+    - mountd
+    - rpc-bind
