@@ -73,3 +73,6 @@ rsyslog_remote_log: /var/log/remote/serverb.log
 
 health_log: /var/log/nexcore-health.log
 
+[all:vars]
+ansible_python_interpreter=/usr/libexec/platform-python
+
