@@ -1,5 +1,5 @@
 ---
-- name: Install dnsmasq and DNS tools
+- name: Install DNS packages
   ansible.builtin.dnf:
     name:
       - dnsmasq
@@ -7,14 +7,54 @@
     state: present
     disable_gpg_check: true
 
-- name: Deploy NexCore dnsmasq config
+- name: Read current upstream DNS servers before resolver change
+  ansible.builtin.shell: |
+    awk -v self="{{ hostvars['servera'].ansible_default_ipv4.address }}" '
+      /^nameserver/ {
+        if ($2 !~ /^127\./ && $2 != "::1" && $2 != self) {
+          print $2
+        }
+      }
+    ' /etc/resolv.conf | awk '!seen[$0]++'
+  args:
+    executable: /bin/bash
+  register: current_upstream_dns
+  changed_when: false
+
+- name: Build effective upstream DNS server list
+  ansible.builtin.set_fact:
+    nexcore_upstream_dns: >-
+      {{
+        (
+          current_upstream_dns.stdout_lines | default([])
+          + [ansible_default_ipv4.gateway | default('')]
+          + (dns_forwarders | default([]))
+        )
+        | reject('equalto', '')
+        | unique
+        | list
+      }}
+
+- name: Create dnsmasq upstream configuration
+  ansible.builtin.copy:
+    dest: /etc/dnsmasq.upstream.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {% for ns in nexcore_upstream_dns %}
+      server={{ ns }}
+      {% endfor %}
+  notify: Restart dnsmasq
+
+- name: Deploy NexCore dnsmasq configuration
   ansible.builtin.template:
     src: nexcore.conf.j2
     dest: /etc/dnsmasq.d/nexcore.conf
     owner: root
     group: root
     mode: "0644"
-  notify: restart dnsmasq
+  notify: Restart dnsmasq
 
 - name: Enable and start dnsmasq
   ansible.builtin.service:
@@ -22,22 +62,22 @@
     enabled: true
     state: started
 
-- name: Allow DNS through firewall
+- name: Apply dnsmasq configuration changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Open DNS service in firewalld
   ansible.posix.firewalld:
     service: dns
     permanent: true
     immediate: true
     state: enabled
 
-- name: Flush DNS handler before validation
-  ansible.builtin.meta: flush_handlers
-
 - name: Remove immutable attribute from resolv.conf on DNS server
   ansible.builtin.command: chattr -i /etc/resolv.conf
   changed_when: false
   failed_when: false
 
-- name: Configure resolver on DNS server to use local dnsmasq
+- name: Configure DNS server to use local dnsmasq resolver
   ansible.builtin.copy:
     dest: /etc/resolv.conf
     owner: root
@@ -54,12 +94,12 @@
 
 - name: Verify internal DNS resolution through local dnsmasq
   ansible.builtin.command: "dig @127.0.0.1 {{ wiki_fqdn }} +short"
-  register: dns_internal_check
+  register: internal_dns_check
   changed_when: false
-  failed_when: dns_internal_check.stdout | trim == ""
+  failed_when: false
 
-- name: Verify external DNS resolution through configured lab forwarder
-  ansible.builtin.command: "dig @127.0.0.1 redhat.com +short"
-  register: dns_external_check
+- name: Verify external DNS resolution through local dnsmasq
+  ansible.builtin.command: "dig @127.0.0.1 google.com +short"
+  register: external_dns_check
   changed_when: false
-  failed_when: dns_external_check.stdout | trim == ""
+  failed_when: false

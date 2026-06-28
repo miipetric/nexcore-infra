@@ -44,6 +44,7 @@ shared_size: 2g
 
 dns_forwarders:
   - 8.8.8.8
+  - 1.1.1.1
 
 # BR-05 - User and access management
 
