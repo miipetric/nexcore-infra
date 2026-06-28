@@ -43,8 +43,7 @@ shared_size: 2g
 # BR-04 - Internal DNS
 
 dns_forwarders:
-  - 8.8.8.8
-  - 1.1.1.1
+  - 172.25.250.220
 
 # BR-05 - User and access management
 
