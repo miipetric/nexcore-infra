@@ -12,8 +12,6 @@
     group: root
     mode: "0755"
 
-# MediaWiki install
-
 - name: Download MediaWiki release archive
   ansible.builtin.get_url:
     url: "{{ mediawiki_download_url }}"
@@ -65,8 +63,6 @@
     owner: apache
     group: apache
     mode: "0640"
-
-# WordPress real install
 
 - name: Download WordPress release archive
   ansible.builtin.get_url:
@@ -126,8 +122,6 @@
     --allow-root
   when: wordpress_installed.rc != 0
   no_log: true
-
-# Apache, SELinux, firewall
 
 - name: Deploy Apache vhosts
   ansible.builtin.template:
